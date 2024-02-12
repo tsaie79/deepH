@@ -1,0 +1,91 @@
+# use the lightweight alpine image with bash command
+
+FROM ubuntu:20.04 as base
+
+
+# create a new stage for the install python3.9 and its dependencies
+FROM base as python
+ENV DEBIAN_FRONTEND=noninteractive
+
+## install conda
+RUN apt-get update && apt-get install -y wget && \
+    wget -qO - https://repo.anaconda.com/miniconda/Miniconda3-py39_4.10.3-Linux-x86_64.sh > /tmp/miniconda.sh && \
+    bash /tmp/miniconda.sh -b -p /usr/local/miniconda && \
+    rm /tmp/miniconda.sh && \
+    apt-get remove -y wget && \
+    apt-get autoremove -y && \
+    apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set path to conda
+ENV PATH=/usr/local/miniconda/bin:$PATH
+## run the conda init script
+RUN conda init bash
+
+## run docker-img/install-pypkg.sh to install required python packages
+COPY install-pypkg.sh /tmp/
+RUN chmod +x /tmp/install-pypkg.sh
+RUN /tmp/install-pypkg.sh
+
+
+# create a new stage for the build just to install julia and required packages
+FROM base as julia
+# Install Julia
+RUN apt-get update && apt-get install -y wget gnupg && \
+    wget -qO - https://julialang-s3.julialang.org/bin/linux/x64/1.6/julia-1.6.0-linux-x86_64.tar.gz | tar -xzf - -C /usr --strip-components 1 && \
+    apt-get remove -y wget gnupg && \
+    apt-get autoremove -y && \
+    apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# Run install-julia-pkg.sh script to install required Julia packages
+COPY install-julia-pkg.sh /tmp/
+RUN chmod +x /tmp/install-julia-pkg.sh
+RUN /tmp/install-julia-pkg.sh
+
+
+# create a new stage for the install deepH
+FROM base as deepH
+# COPY julia and python3.9 from the builder stage
+# COPY --from=julia /usr/bin/julia /usr/bin/julia
+COPY --from=python /usr/local/miniconda /usr/local/miniconda
+ENV PATH=/usr/local/miniconda/bin:$PATH
+
+## install git
+RUN apt-get update && apt-get install -y git && \
+    apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/*
+
+
+## install deepH
+COPY install-deepH.sh /tmp/
+RUN chmod +x /tmp/install-deepH.sh
+RUN /tmp/install-deepH.sh
+RUN pip install markupsafe==2.0.1
+
+
+
+# create a scratch stage to copy the installed packages from the previous stages
+FROM base as final
+
+# Copy deeph
+COPY --from=julia /root/.julia /root/.julia
+COPY --from=julia /usr/share/julia /usr/share/julia
+COPY --from=julia /usr/lib/ /usr/lib/
+COPY --from=julia /usr/bin/julia /usr/bin/julia
+COPY --from=deepH /usr/local/miniconda/ /usr/local/miniconda/
+ENV PATH=/usr/local/miniconda/bin:$PATH
+
+
+
+# Set the working directory
+WORKDIR /home
+
+COPY preprocess_default.ini /home/
+COPY main.sh /home/
+
+# Set the entrypoint to the main.sh script
+CMD ["/bin/bash", "main.sh"]
+
+
