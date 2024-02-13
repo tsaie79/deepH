@@ -32,23 +32,20 @@ RUN /tmp/install-pypkg.sh
 FROM base as julia
 # Install Julia
 RUN apt-get update && apt-get install -y wget gnupg && \
-    wget -qO - https://julialang-s3.julialang.org/bin/linux/x64/1.6/julia-1.6.0-linux-x86_64.tar.gz | tar -xzf - -C /usr --strip-components 1 && \
+    wget -qO - https://julialang-s3.julialang.org/bin/linux/x64/1.6/julia-1.6.0-linux-x86_64.tar.gz | tar -xzf - -C /root --strip-components 1 && \
     apt-get remove -y wget gnupg && \
     apt-get autoremove -y && \
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/*
 
-
 # Run install-julia-pkg.sh script to install required Julia packages
+ENV PATH=/root/bin:$PATH
 COPY install-julia-pkg.sh /tmp/
 RUN chmod +x /tmp/install-julia-pkg.sh
 RUN /tmp/install-julia-pkg.sh
 
-
 # create a new stage for the install deepH
 FROM base as deepH
-# COPY julia and python3.9 from the builder stage
-# COPY --from=julia /usr/bin/julia /usr/bin/julia
 COPY --from=python /usr/local/miniconda /usr/local/miniconda
 ENV PATH=/usr/local/miniconda/bin:$PATH
 
@@ -58,12 +55,11 @@ RUN apt-get update && apt-get install -y git && \
     rm -rf /var/lib/apt/lists/*
 
 
-## install deepH
+# install deepH
 COPY install-deepH.sh /tmp/
 RUN chmod +x /tmp/install-deepH.sh
 RUN /tmp/install-deepH.sh
 RUN pip install markupsafe==2.0.1
-
 
 
 # create a scratch stage to copy the installed packages from the previous stages
@@ -71,15 +67,15 @@ FROM base as final
 
 # Copy deeph
 COPY --from=julia /root/.julia /root/.julia
-COPY --from=julia /usr/share/julia /usr/share/julia
-COPY --from=julia /usr/lib/ /usr/lib/
-COPY --from=julia /usr/bin/julia /usr/bin/julia
+COPY --from=julia /root/share/julia /root/share/julia
+COPY --from=julia /root/lib /root/lib
+COPY --from=julia /root/bin/julia /root/bin/julia
 COPY --from=deepH /usr/local/miniconda/ /usr/local/miniconda/
 ENV PATH=/usr/local/miniconda/bin:$PATH
+ENV PATH=/root/bin:$PATH
 
 
 
-# Set the working directory to ~
 WORKDIR /home
 
 COPY preprocess_default.ini /home/
