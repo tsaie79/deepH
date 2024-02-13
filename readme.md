@@ -1,7 +1,7 @@
 # How to run this docker image
 
 ```bash
-docker run -v /dir/to/openmx/outputs:/some/path  -it --rm deeph-preprocess main /some/path
+docker run -v /dir/to/openmx/outputs:/some/path  -it --rm tsaie79/deeph-preprocess main /some/path
 ```
 where,
 1. ` /dir/to/openmx/outputs` is the path to the folder containing the input files `openmx.out` and `openmx.scfout`. 
