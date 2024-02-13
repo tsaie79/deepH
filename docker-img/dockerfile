@@ -79,7 +79,7 @@ ENV PATH=/usr/local/miniconda/bin:$PATH
 
 
 
-# Set the working directory
+# Set the working directory to ~
 WORKDIR /home
 
 COPY preprocess_default.ini /home/
