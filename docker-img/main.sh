@@ -1,14 +1,16 @@
 #!/bin/bash
 
-cd /home/
-mkdir raw_dir
-mkdir processed_dir
+mkdir /home/raw_dir
+mkdir /home/processed_dir
 
-cp $1/openmx.out ./raw_dir
-cp $1/openmx.scfout ./raw_dir
+cp $1/openmx.out /home/raw_dir
+cp $1/openmx.scfout /home/raw_dir
 
-cat ./raw_dir/openmx.out >> ./raw_dir/openmx.scfout
+
+cat /home/raw_dir/openmx.out >> /home/raw_dir/openmx.scfout
 
 export CONFIG_FILE="/home/preprocess_default.ini"
 
 deeph-preprocess --config $CONFIG_FILE 
+
+cp -r /home/processed_dir $1

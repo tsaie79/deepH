@@ -85,7 +85,9 @@ WORKDIR /home
 COPY preprocess_default.ini /home/
 COPY main.sh /home/
 
-# Set the entrypoint to the main.sh script
-CMD ["/bin/bash", "main.sh"]
+RUN chmod +x /home/main.sh
+RUN cp /home/main.sh /usr/local/bin/main
+# Set the entrypoint
+CMD ["main"]
 
 
