@@ -28,22 +28,6 @@ RUN chmod +x /tmp/install-pypkg.sh
 RUN /tmp/install-pypkg.sh
 
 
-# create a new stage for the build just to install julia and required packages
-FROM base as julia
-# Install Julia
-RUN apt-get update && apt-get install -y wget gnupg && \
-    wget -qO - https://julialang-s3.julialang.org/bin/linux/x64/1.6/julia-1.6.0-linux-x86_64.tar.gz | tar -xzf - -C /root --strip-components 1 && \
-    apt-get remove -y wget gnupg && \
-    apt-get autoremove -y && \
-    apt-get clean -y && \
-    rm -rf /var/lib/apt/lists/*
-
-# Run install-julia-pkg.sh script to install required Julia packages
-ENV PATH=/root/bin:$PATH
-COPY install-julia-pkg.sh /tmp/
-RUN chmod +x /tmp/install-julia-pkg.sh
-RUN /tmp/install-julia-pkg.sh
-
 # create a new stage for the install deepH
 FROM base as deepH
 COPY --from=python /usr/local/miniconda /usr/local/miniconda
@@ -66,24 +50,23 @@ RUN pip install markupsafe==2.0.1
 FROM base as final
 
 # Copy deeph
-COPY --from=julia /root/.julia /root/.julia
-COPY --from=julia /root/share/julia /root/share/julia
-COPY --from=julia /root/lib /root/lib
-COPY --from=julia /root/bin/julia /root/bin/julia
+COPY --from=julia /usr/local/.julia /usr/local/.julia
+COPY --from=julia /usr/local/share/julia /usr/local/share/julia
+COPY --from=julia /usr/local/lib /usr/local/lib
+COPY --from=julia /usr/local/bin/julia /usr/local/bin/julia
 COPY --from=deepH /usr/local/miniconda/ /usr/local/miniconda/
+
+# set the environment variables
 ENV PATH=/usr/local/miniconda/bin:$PATH
-ENV PATH=/root/bin:$PATH
+ENV JULIA_DEPOT_PATH /usr/local/.julia
 
-
-
+# Set the working directory
 WORKDIR /home
-
 COPY preprocess_default.ini /home/
 COPY main.sh /home/
 
 RUN chmod +x /home/main.sh
 RUN cp /home/main.sh /usr/local/bin/main
-# Set the entrypoint
 CMD ["main"]
 
 
