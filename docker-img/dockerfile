@@ -28,6 +28,22 @@ RUN chmod +x /tmp/install-pypkg.sh
 RUN /tmp/install-pypkg.sh
 
 
+# create a new stage for the build just to install julia and required packages
+FROM base as julia
+# Install Julia
+RUN apt-get update && apt-get install -y wget gnupg && \
+    wget -qO - https://julialang-s3.julialang.org/bin/linux/x64/1.6/julia-1.6.0-linux-x86_64.tar.gz | tar -xzf - -C /usr/local--strip-components 1 && \
+    apt-get remove -y wget gnupg && \
+    apt-get autoremove -y && \
+    apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Run install-julia-pkg.sh script to install required Julia packages
+ENV PATH=/usr/local/bin:$PATH
+COPY install-julia-pkg.sh /tmp/
+RUN chmod +x /tmp/install-julia-pkg.sh
+RUN /tmp/install-julia-pkg.sh
+
 # create a new stage for the install deepH
 FROM base as deepH
 COPY --from=python /usr/local/miniconda /usr/local/miniconda
