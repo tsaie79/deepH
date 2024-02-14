@@ -30,7 +30,7 @@ RUN /tmp/install-pypkg.sh
 
 # create a scratch stage to copy the installed packages from the previous stages
 FROM base as final
-# create a new stage for the install deepH
+# copy the installed packages from the python stage
 COPY --from=python /usr/local/miniconda /usr/local/miniconda
 ENV PATH=/usr/local/miniconda/bin:$PATH
 
@@ -59,7 +59,6 @@ COPY install-deepH.sh /tmp/
 RUN chmod +x /tmp/install-deepH.sh
 RUN /tmp/install-deepH.sh
 RUN pip install markupsafe==2.0.1
-
 
 # Set the working directory
 WORKDIR /home
