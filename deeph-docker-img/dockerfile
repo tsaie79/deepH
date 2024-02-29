@@ -1,0 +1,80 @@
+# use the lightweight alpine image with bash command
+
+FROM ubuntu:20.04 as base
+
+
+# create a new stage for the install python3.9 and its dependencies
+FROM base as python
+ENV DEBIAN_FRONTEND=noninteractive
+
+## install conda
+RUN apt-get update && apt-get install -y wget && \
+    wget -qO - https://repo.anaconda.com/miniconda/Miniconda3-py39_4.10.3-Linux-x86_64.sh > /tmp/miniconda.sh && \
+    bash /tmp/miniconda.sh -b -p /usr/local/miniconda && \
+    rm /tmp/miniconda.sh && \
+    apt-get remove -y wget && \
+    apt-get autoremove -y && \
+    apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set path to conda
+ENV PATH=/usr/local/miniconda/bin:$PATH
+## run the conda init script
+RUN conda init bash
+
+## run docker-img/install-pypkg.sh to install required python packages
+COPY install-pypkg.sh /tmp/
+RUN chmod +x /tmp/install-pypkg.sh
+RUN /tmp/install-pypkg.sh
+
+
+# create a scratch stage to copy the installed packages from the previous stages
+FROM base as final
+# copy the installed packages from the python stage
+COPY --from=python /usr/local/miniconda /usr/local/miniconda
+ENV PATH=/usr/local/miniconda/bin:$PATH
+
+# Install Julia
+ENV JULIA_DEPOT_PATH /usr/local/.julia
+RUN apt-get update && apt-get install -y wget gnupg && \
+    wget -qO - https://julialang-s3.julialang.org/bin/linux/x64/1.6/julia-1.6.0-linux-x86_64.tar.gz | tar -xzf - -C /usr/local --strip-components 1 && \
+    apt-get remove -y wget gnupg && \
+    apt-get autoremove -y && \
+    apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Run install-julia-pkg.sh script to install required Julia packages
+ENV PATH=/usr/local/bin:$PATH
+COPY install-julia-pkg.sh /tmp/
+RUN chmod +x /tmp/install-julia-pkg.sh
+RUN /tmp/install-julia-pkg.sh
+
+## install git
+RUN apt-get update && apt-get install -y git && \
+    apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# install deepH
+COPY install-deepH.sh /tmp/
+RUN chmod +x /tmp/install-deepH.sh
+RUN /tmp/install-deepH.sh
+RUN pip install markupsafe==2.0.1
+
+# install deeph-e3
+COPY install-deepH-E3.sh /tmp/
+RUN chmod +x /tmp/install-deepH-E3.sh
+RUN /tmp/install-deepH-E3.sh
+
+
+
+# Set the working directory
+WORKDIR /home
+COPY preprocess_default.ini .
+RUN cp /DeepH-E3/deephe3/default_configs/base_default.ini .
+COPY main.sh .
+
+RUN chmod +x main.sh
+RUN cp main.sh /usr/local/bin/main
+CMD ["main"]
+
+
