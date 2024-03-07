@@ -54,22 +54,17 @@ RUN apt-get update && apt-get install -y git && \
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/*
 
-# install deepH
-COPY install-deepH.sh /tmp/
-RUN chmod +x /tmp/install-deepH.sh
-RUN /tmp/install-deepH.sh
-RUN pip install markupsafe==2.0.1
-
 # install deeph-e3
 COPY install-deepH-E3.sh /tmp/
 RUN chmod +x /tmp/install-deepH-E3.sh
 RUN /tmp/install-deepH-E3.sh
+RUN pip install markupsafe==2.0.1
 
 
 
 # Set the working directory
 WORKDIR /home
-COPY preprocess_default.ini .
+# COPY preprocess_default.ini .
 RUN cp /DeepH-E3/deephe3/default_configs/base_default.ini .
 COPY main.sh .
 
